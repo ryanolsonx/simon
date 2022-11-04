@@ -3,6 +3,8 @@
 const TOTAL_LEVELS = 5;
 const COLORS = ['red', 'green', 'blue', 'yellow'];
 
+// -- STATE
+
 const initialState = {
 	heading: 'Simon Game',
 	info: '',
@@ -48,7 +50,7 @@ const view = () => {
 	// activate / deactivate tiles
 	if (state.activatedColor) {
 		COLORS.filter((color) => color !== state.activatedColor).forEach(
-			deactivateTile
+			deactivateTile,
 		);
 		activateTile(state.activatedColor);
 	} else {
