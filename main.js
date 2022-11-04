@@ -11,8 +11,8 @@ const initialState = {
 	level: 0,
 	showStartButton: true,
 	allowTileClicks: false,
-	sequence: [], // computer sequence to guess
-	humanSequence: [], // human guesses so far in sequence
+	computerColorsToGuess: [], // computer sequence to guess
+	playerGuesses: [], // human guesses so far in sequence
 };
 
 let state = initialState;
@@ -107,73 +107,19 @@ const createUpdater = () => {
 
 const update = createUpdater();
 
+// -- STATE UPDATE HELPERS
+
 const resetGame = () => update(initialState);
 
-const handleColorClicked = async (color) => {
-	update({ humanSequence: [...state.humanSequence, color] });
-
-	const index = state.humanSequence.length - 1;
-
-	$.playSoundByColor(color);
-
-	const remainingGuesses = state.sequence.length - state.humanSequence.length;
-	const guess = state.humanSequence[index];
-	const actual = state.sequence[index];
-
-	const isWrong = guess !== actual;
-
-	if (isWrong) {
-		alert('Sorry, game over.');
-		resetGame();
-		return;
-	}
-
-	const answeredFullSequenceCorrectly =
-		state.humanSequence.length === state.sequence.length;
-	const hasFinishedAllLevels = state.level === TOTAL_LEVELS;
-	const hasFinishedRound = answeredFullSequenceCorrectly;
-
-	const hasWon = hasFinishedRound && hasFinishedAllLevels;
-
-	if (hasWon) {
-		// show that there are no guesses left..
-		update({
-			info: getRemainingGuessesMessage(0),
-		});
-		alert('You won!');
-		resetGame();
-		return;
-	} else if (hasFinishedRound) {
-		update({
-			humanSequence: [],
-			info: 'Success! Keep going!',
-		});
-
-		await sleep(1000);
-
-		nextRound();
-	} else {
-		// still guessing...
-		update({
-			info: getRemainingGuessesMessage(remainingGuesses),
-		});
-	}
-};
-
-const getRemainingGuessesMessage = (remaining) =>
-	`Your turn. click ${remaining} tile(s).`;
-
-const allowHumanToGuess = () => {
+const allowPlayerToGuess = () => {
 	update({
 		info: getRemainingGuessesMessage(state.level),
 		allowTileClicks: true,
 	});
 };
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const computerShowSequence = async (seq) => {
-	for (const color of seq) {
+const flashColors = async (colorsToFlash) => {
+	for (const color of colorsToFlash) {
 		$.playSoundByColor(color);
 		update({ activatedColor: color });
 		await sleep(600); // sleep while activated for the flashing effect
@@ -182,25 +128,111 @@ const computerShowSequence = async (seq) => {
 	}
 };
 
+// -- UTILS
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
+// -- GAME LOGIC
+
+const hasLost = () => {
+	const index = state.playerGuesses.length - 1;
+
+	const guess = state.playerGuesses[index];
+	const answer = state.computerColorsToGuess[index];
+
+	return guess !== answer;
+};
+
+// dependent on hasLost being computed first
+const hasFinishedRound = () =>
+	state.playerGuesses.length === state.computerColorsToGuess.length;
+
+// dependent on hasLost being computed first
+const hasWon = () => {
+	const hasFinishedAllLevels = state.level === TOTAL_LEVELS;
+
+	return hasFinishedRound() && hasFinishedAllLevels;
+};
+
+const getRemainingGuessesMessage = (remaining) =>
+	`Your turn. click ${remaining} tile(s).`;
+
+const handleLoss = () => {
+	alert('Sorry, game over.');
+	resetGame();
+};
+
+const handleWin = async () => {
+	// show that there are no guesses left..
+	update({
+		info: getRemainingGuessesMessage(0),
+	});
+	await sleep(50); // allow info to update and show
+	alert('You won!');
+	resetGame();
+};
+
+const handleRoundFinished = async () => {
+	update({
+		playerGuesses: [],
+		info: 'Success! Keep going!',
+	});
+
+	await sleep(1000);
+
+	nextRound();
+};
+
+const handleWaitingForNextGuess = () => {
+	const remainingGuesses =
+		state.computerColorsToGuess.length - state.playerGuesses.length;
+
+	// still guessing...
+	update({
+		info: getRemainingGuessesMessage(remainingGuesses),
+	});
+};
+
+const handleColorClicked = async (color) => {
+	update({ playerGuesses: [...state.playerGuesses, color] });
+
+	$.playSoundByColor(color);
+
+	if (hasLost()) {
+		handleLoss();
+	} else if (hasWon()) {
+		await handleWin();
+	} else if (hasFinishedRound()) {
+		await handleRoundFinished();
+	} else {
+		handleWaitingForNextGuess();
+	}
+};
+
 const nextRound = async () => {
-	const level = state.level + 1;
+	const nextLevel = state.level + 1;
 
 	update({
-		heading: `Level ${level} of ${TOTAL_LEVELS}`,
-		level: level,
+		heading: `Level ${nextLevel} of ${TOTAL_LEVELS}`,
+		level: nextLevel,
 		allowTileClicks: false,
 		info: 'Wait for the computer',
 	});
 
-	const nextSequence = [...state.sequence, getRandomColor()];
-	await computerShowSequence(nextSequence);
+	const nextComputerColorsToGuess = [
+		...state.computerColorsToGuess,
+		getRandomColor(),
+	];
 
-	update({ sequence: nextSequence });
+	await flashColors(nextComputerColorsToGuess);
 
-	await sleep(1000);
-	allowHumanToGuess();
+	update({ computerColorsToGuess: nextComputerColorsToGuess });
+
+	await sleep(500);
+
+	allowPlayerToGuess();
 };
 
 const startGame = () => {
@@ -211,12 +243,14 @@ const startGame = () => {
 
 // -- EVENT HANDLERS
 
-$.tiles.addEventListener('click', (event) => {
+const handleTilesContainerClicked = (event) => {
 	const { tile } = event.target.dataset;
 
 	if (tile) {
 		handleColorClicked(tile);
 	}
-});
+};
+
+$.tiles.addEventListener('click', handleTilesContainerClicked);
 
 $.startBtn.addEventListener('click', startGame);
