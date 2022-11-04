@@ -38,14 +38,29 @@ const $ = {
 			$.info.classList.add('hidden');
 		}
 	},
+	getTileByColor: (color) => document.querySelector(`[data-tile='${color}']`),
 	activateTileByColor: (color) => {
 		$.getTileByColor(color).classList.add('activated');
 	},
 	deactivateTileByColor: (color) => {
 		$.getTileByColor(color).classList.remove('activated');
 	},
-	getTileByColor: (color) => document.querySelector(`[data-tile='${color}']`),
-	getSoundByColor: (color) => document.querySelector(`[data-sound='${color}']`),
+	playSoundByColor: (color) =>
+		document.querySelector(`[data-sound='${color}']`).play(),
+	setStartButtonShown: (showStartButton) => {
+		if (showStartButton) {
+			$.startBtn.classList.remove('hidden');
+		} else {
+			$.startBtn.classList.add('hidden');
+		}
+	},
+	setTileClicksAllowed: (allowTileClicks) => {
+		if (allowTileClicks) {
+			$.tiles.classList.remove('unclickable');
+		} else {
+			$.tiles.classList.add('unclickable');
+		}
+	},
 };
 
 // -- RENDER ON STATE UPDATE
@@ -68,17 +83,11 @@ const createUpdater = () => {
 			}
 		}
 
-		if (state.showStartButton) {
-			$.startBtn.classList.remove('hidden');
-		} else {
-			$.startBtn.classList.add('hidden');
-		}
+		if (keysChangedMap.showStartButton !== undefined)
+			$.setStartButtonShown(state.showStartButton);
 
-		if (state.allowTileClicks) {
-			$.tiles.classList.remove('unclickable');
-		} else {
-			$.tiles.classList.add('unclickable');
-		}
+		if (keysChangedMap.allowTileClicks !== undefined)
+			$.setTileClicksAllowed(state.allowTileClicks);
 	};
 
 	return (stateChanges) => {
@@ -105,7 +114,7 @@ const handleColorClicked = async (color) => {
 
 	const index = state.humanSequence.length - 1;
 
-	$.getSoundByColor(color).play();
+	$.playSoundByColor(color);
 
 	const remainingGuesses = state.sequence.length - state.humanSequence.length;
 	const guess = state.humanSequence[index];
@@ -151,14 +160,6 @@ const handleColorClicked = async (color) => {
 	}
 };
 
-$.tiles.addEventListener('click', (event) => {
-	const { tile } = event.target.dataset;
-
-	if (tile) {
-		handleColorClicked(tile);
-	}
-});
-
 const getRemainingGuessesMessage = (remaining) =>
 	`Your turn. click ${remaining} tile(s).`;
 
@@ -173,7 +174,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const computerShowSequence = async (seq) => {
 	for (const color of seq) {
-		$.getSoundByColor(color).play();
+		$.playSoundByColor(color);
 		update({ activatedColor: color });
 		await sleep(600); // sleep while activated for the flashing effect
 		update({ activatedColor: '' });
@@ -207,5 +208,15 @@ const startGame = () => {
 
 	nextRound();
 };
+
+// -- EVENT HANDLERS
+
+$.tiles.addEventListener('click', (event) => {
+	const { tile } = event.target.dataset;
+
+	if (tile) {
+		handleColorClicked(tile);
+	}
+});
 
 $.startBtn.addEventListener('click', startGame);
