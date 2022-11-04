@@ -1,7 +1,7 @@
+// -- CONSTANTS
+
 const TOTAL_LEVELS = 5;
-const TIME_BETWEEN_TILE_FLASHES = 600;
 const COLORS = ['red', 'green', 'blue', 'yellow'];
-const ONE_SECOND = 1000;
 
 const initialState = {
 	heading: 'Simon Game',
@@ -110,7 +110,7 @@ const handleColorClicked = async (color) => {
 			info: 'Success! Keep going!',
 		});
 
-		await sleep(ONE_SECOND);
+		await sleep(1000);
 
 		nextRound();
 	} else {
@@ -145,7 +145,7 @@ const computerShowSequence = async (seq) => {
 	for (const color of seq) {
 		$.getSoundByColor(color).play();
 		update({ activatedColor: color });
-		await sleep(TIME_BETWEEN_TILE_FLASHES);
+		await sleep(600); // sleep while activated for the flashing effect
 		update({ activatedColor: '' });
 		await sleep(50);
 	}
@@ -168,7 +168,7 @@ const nextRound = async () => {
 
 	update({ sequence: nextSequence });
 
-	await sleep(ONE_SECOND);
+	await sleep(1000);
 	allowHumanToGuess();
 };
 
