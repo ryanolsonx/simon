@@ -1,158 +1,181 @@
-const GAME_TITLE = 'Simon';
 const TOTAL_LEVELS = 5;
-const DELAY_BETWEEN_TILE_FLASHES = 600;
+const TIME_BETWEEN_TILE_FLASHES = 600;
+const COLORS = ["red", "green", "blue", "yellow"];
+const ONE_SECOND = 1000;
 
-// -- Get elements on the page
-const heading = document.querySelector('#heading');
-const tiles = document.querySelector('#tiles');
-const info = document.querySelector('#info');
-const startButton = document.querySelector('#start-button');
+const initialState = {
+  heading: "Simon Game",
+  info: "",
+  level: 0,
+  showStartButton: true,
+  allowTileClicks: false,
+  sequence: [], // computer sequence to guess
+  humanSequence: [], // human guesses so far in sequence
+};
 
-// -- Element helpers
-function hideStartButton() {
-  startButton.classList.add('hidden');
-}
+let state = initialState;
 
-function showStartButton() {
-  startButton.classList.remove('hidden');
-}
+const update = (stateChanges) => {
+  state = { ...state, ...stateChanges };
+  view();
+};
 
-function showInfoMessage(message) {
-  info.classList.remove('hidden');
-  info.textContent = message;
-}
+const $ = {
+  heading: document.querySelector("#heading"),
+  tiles: document.querySelector("#tiles"),
+  info: document.querySelector("#info"),
+  startBtn: document.querySelector("#start-button"),
 
-function hideInfoMessage() {
-  info.classList.add('hidden');
-}
+  getTileByColor: (color) => document.querySelector(`[data-tile='${color}']`),
+  getSoundByColor: (color) => document.querySelector(`[data-sound='${color}']`),
+};
 
-function setHeading(nextHeading) {
-  heading.textContent = nextHeading;
-}
+const activateTile = (color) =>
+  $.getTileByColor(color).classList.add("activated");
+const deactivateTile = (color) =>
+  $.getTileByColor(color).classList.remove("activated");
 
-function preventTileClicks() {
-  tiles.classList.add('unclickable');
-}
+const view = () => {
+  $.heading.textContent = state.heading;
 
-function allowTileClicks() {
-  tiles.classList.remove('unclickable');
-}
+  if (state.info) {
+    $.info.classList.remove("hidden");
+    $.info.textContent = state.info;
+  } else {
+    $.info.classList.add("hidden");
+  }
 
-function flashTileByColor(color) {
-  const tile = document.querySelector(`[data-tile='${color}']`);
+  // activate / deactivate tiles
+  if (state.activatedColor) {
+    COLORS.filter((color) => color !== state.activatedColor).forEach(
+      deactivateTile
+    );
+    activateTile(state.activatedColor);
+  } else {
+    COLORS.forEach(deactivateTile);
+  }
 
-  tile.classList.add('activated');
+  if (state.showStartButton) {
+    $.startBtn.classList.remove("hidden");
+  } else {
+    $.startBtn.classList.add("hidden");
+  }
 
-  setTimeout(() => {
-    tile.classList.remove('activated');
-  }, DELAY_BETWEEN_TILE_FLASHES / 2);
-}
+  if (state.allowTileClicks) {
+    $.tiles.classList.remove("unclickable");
+  } else {
+    $.tiles.classList.add("unclickable");
+  }
+};
 
-function playTileColorSound(color) {
-  const sound = document.querySelector(`[data-sound='${color}']`);
-  sound.play();
-}
+const resetGame = () => update(initialState);
 
-// -- Game logic and data
-let level = 0;
-let sequence = [];
-let humanSequence = [];
+const handleColorClicked = async (color) => {
+  update({ humanSequence: [...state.humanSequence, color] });
 
-function startGame() {
-  hideStartButton();
-  showInfoMessage('Wait for the computer');
-  nextRound();
-}
+  const index = state.humanSequence.length - 1;
 
-function resetGame() {
-  window.location.reload();
-}
+  $.getSoundByColor(color).play();
 
-function nextRound() {
-  level = level + 1;
-  preventTileClicks();
+  const remainingGuesses = state.sequence.length - state.humanSequence.length;
+  const guess = state.humanSequence[index];
+  const actual = state.sequence[index];
 
-  setHeading(`Level ${level} of ${TOTAL_LEVELS}`);
+  const isWrong = guess !== actual;
 
-  let nextSequence = [...sequence, getRandomTile()];
-  computerShowSequence(nextSequence);
-
-  sequence = [...nextSequence];
-
-  setTimeout(() => {
-    allowHumanToGuess();
-  }, level * DELAY_BETWEEN_TILE_FLASHES + 1000);
-}
-
-function getRandomTile() {
-  let tiles = ['red', 'green', 'blue', 'yellow'];
-  let random = tiles[Math.floor(Math.random() * tiles.length)];
-
-  return random;
-}
-
-function computerShowSequence(seq) {
-  seq.forEach((color, index) => {
-    setTimeout(() => flashTile(color), (index + 1) * DELAY_BETWEEN_TILE_FLASHES);
-  });
-}
-
-function flashTile(color) {
- playTileColorSound(color);
- flashTileByColor(color); 
-}
-
-function allowHumanToGuess() {
-  allowTileClicks();
-  showRemainingGuessesMessage(level);
-}
-
-function showRemainingGuessesMessage(remaining) {
-  showInfoMessage(`Your turn. click ${remaining} tile(s).`);
-}
-
-function handleColorClicked(color) {
-  humanSequence.push(color);
-  let index = humanSequence.length - 1;
-
-  playTileColorSound(color);
-
-  let remainingGuesses = sequence.length - humanSequence.length;
-  let guess = humanSequence[index];
-  let actual = sequence[index];
-
-  // wrong
-  if (guess !== actual) {
-    alert('Game over');
+  if (isWrong) {
+    alert("Sorry, game over.");
     resetGame();
     return;
   }
 
-  if (humanSequence.length === sequence.length) {
-    if (level === TOTAL_LEVELS) {
-      alert('You won!');
-      resetGame();
-      return;
-    }
+  const answeredFullSequenceCorrectly =
+    state.humanSequence.length === state.sequence.length;
+  const hasFinishedAllLevels = state.level === TOTAL_LEVELS;
+  const hasFinishedRound = answeredFullSequenceCorrectly;
 
-    humanSequence = [];
-    showInfoMessage('Success! Keep going!');
+  const hasWon = hasFinishedRound && hasFinishedAllLevels;
 
-    setTimeout(() => {
-      nextRound();
-    }, 1000);
+  if (hasWon) {
+    // show that there are no guesses left..
+    update({
+      info: getRemainingGuessesMessage(0),
+    });
+    alert("You won!");
+    resetGame();
+    return;
+  } else if (hasFinishedRound) {
+    update({
+      humanSequence: [],
+      info: "Success! Keep going!",
+    });
+
+    await sleep(ONE_SECOND);
+
+    nextRound();
   } else {
-    showRemainingGuessesMessage(remainingGuesses);
+    // still guessing...
+    update({
+      info: getRemainingGuessesMessage(remainingGuesses),
+    });
   }
-}
+};
 
-// Events for elements on the page
-startButton.addEventListener('click', startGame);
-
-tiles.addEventListener('click', event => {
+$.tiles.addEventListener("click", (event) => {
   const { tile } = event.target.dataset;
 
   if (tile) {
     handleColorClicked(tile);
   }
 });
+
+const getRemainingGuessesMessage = (remaining) =>
+  `Your turn. click ${remaining} tile(s).`;
+
+const allowHumanToGuess = () => {
+  update({
+    info: getRemainingGuessesMessage(state.level),
+    allowTileClicks: true,
+  });
+};
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const computerShowSequence = async (seq) => {
+  for (const color of seq) {
+    $.getSoundByColor(color).play();
+    update({ activatedColor: color });
+    await sleep(TIME_BETWEEN_TILE_FLASHES);
+    update({ activatedColor: "" });
+    await sleep(50);
+  }
+};
+
+const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
+
+const nextRound = async () => {
+  const level = state.level + 1;
+
+  update({
+    heading: `Level ${level} of ${TOTAL_LEVELS}`,
+    level: level,
+    allowTileClicks: false,
+    info: "Wait for the computer",
+  });
+
+  const nextSequence = [...state.sequence, getRandomColor()];
+  await computerShowSequence(nextSequence);
+
+  update({ sequence: nextSequence });
+
+  await sleep(ONE_SECOND);
+  allowHumanToGuess();
+};
+
+const startGame = () => {
+  update({ showStartButton: false });
+
+  nextRound();
+};
+
+$.startBtn.addEventListener("click", startGame);
