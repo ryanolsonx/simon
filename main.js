@@ -2,7 +2,6 @@
 
 const TOTAL_LEVELS = 5;
 const COLORS = ['red', 'green', 'blue', 'yellow'];
-
 // -- STATE
 
 const initialState = {
@@ -66,42 +65,29 @@ const $ = {
 // -- RENDER ON STATE UPDATE
 
 const createUpdater = () => {
-	const render = (keysChangedMap) => {
-		if (keysChangedMap.heading) $.setHeading(state.heading);
+	const render = () => {
+		$.setHeading(state.heading);
 
-		if (keysChangedMap.info !== undefined) $.setInfo(state.info);
+		$.setInfo(state.info);
 
-		if (keysChangedMap.activatedColor !== undefined) {
-			// activate / deactivate tiles
-			if (state.activatedColor) {
-				COLORS.filter((color) => color !== state.activatedColor).forEach(
-					$.deactivateTileByColor,
-				);
-				$.activateTileByColor(state.activatedColor);
-			} else {
-				COLORS.forEach($.deactivateTileByColor);
-			}
+		// activate / deactivate tiles
+		if (state.activatedColor) {
+			COLORS.filter((color) => color !== state.activatedColor).forEach(
+				$.deactivateTileByColor,
+			);
+			$.activateTileByColor(state.activatedColor);
+		} else {
+			COLORS.forEach($.deactivateTileByColor);
 		}
 
-		if (keysChangedMap.showStartButton !== undefined)
-			$.setStartButtonShown(state.showStartButton);
-
-		if (keysChangedMap.allowTileClicks !== undefined)
-			$.setTileClicksAllowed(state.allowTileClicks);
+		$.setStartButtonShown(state.showStartButton);
+		$.setTileClicksAllowed(state.allowTileClicks);
 	};
 
 	return (stateChanges) => {
 		state = { ...state, ...stateChanges };
 
-		const keysChangedMap = Object.keys(stateChanges).reduce(
-			(keys, key) => ({
-				...keys,
-				[key]: true,
-			}),
-			{},
-		);
-
-		render(keysChangedMap);
+		render();
 	};
 };
 
