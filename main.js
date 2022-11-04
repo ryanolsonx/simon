@@ -25,6 +25,11 @@ const $ = {
 	info: document.querySelector('#info'),
 	startBtn: document.querySelector('#start-button'),
 
+	// -- DOM HELPERS
+
+	setHeading: (heading) => {
+		$.heading.textContent = heading;
+	},
 	getTileByColor: (color) => document.querySelector(`[data-tile='${color}']`),
 	getSoundByColor: (color) => document.querySelector(`[data-sound='${color}']`),
 };
@@ -32,8 +37,8 @@ const $ = {
 // -- RENDER ON STATE UPDATE
 
 const createUpdater = () => {
-	const render = (stateKeysChanged) => {
-		$.heading.textContent = state.heading;
+	const render = (keysChangedMap) => {
+		if (keysChangedMap.heading) $.setHeading(state.heading);
 
 		if (state.info) {
 			$.info.classList.remove('hidden');
@@ -67,7 +72,16 @@ const createUpdater = () => {
 
 	return (stateChanges) => {
 		state = { ...state, ...stateChanges };
-		render(Object.keys(stateChanges));
+
+		const keysChangedMap = Object.keys(stateChanges).reduce(
+			(keys, key) => ({
+				...keys,
+				[key]: true,
+			}),
+			{},
+		);
+
+		render(keysChangedMap);
 	};
 };
 
