@@ -17,10 +17,7 @@ const initialState = {
 
 let state = initialState;
 
-const update = (stateChanges) => {
-	state = { ...state, ...stateChanges };
-	view();
-};
+// -- DOM
 
 const $ = {
 	heading: document.querySelector('#heading'),
@@ -32,43 +29,54 @@ const $ = {
 	getSoundByColor: (color) => document.querySelector(`[data-sound='${color}']`),
 };
 
+// -- RENDER ON STATE UPDATE
+
+const createUpdater = () => {
+	const render = (stateKeysChanged) => {
+		$.heading.textContent = state.heading;
+
+		if (state.info) {
+			$.info.classList.remove('hidden');
+			$.info.textContent = state.info;
+		} else {
+			$.info.classList.add('hidden');
+		}
+
+		// activate / deactivate tiles
+		if (state.activatedColor) {
+			COLORS.filter((color) => color !== state.activatedColor).forEach(
+				deactivateTile,
+			);
+			activateTile(state.activatedColor);
+		} else {
+			COLORS.forEach(deactivateTile);
+		}
+
+		if (state.showStartButton) {
+			$.startBtn.classList.remove('hidden');
+		} else {
+			$.startBtn.classList.add('hidden');
+		}
+
+		if (state.allowTileClicks) {
+			$.tiles.classList.remove('unclickable');
+		} else {
+			$.tiles.classList.add('unclickable');
+		}
+	};
+
+	return (stateChanges) => {
+		state = { ...state, ...stateChanges };
+		render(Object.keys(stateChanges));
+	};
+};
+
+const update = createUpdater();
+
 const activateTile = (color) =>
 	$.getTileByColor(color).classList.add('activated');
 const deactivateTile = (color) =>
 	$.getTileByColor(color).classList.remove('activated');
-
-const view = () => {
-	$.heading.textContent = state.heading;
-
-	if (state.info) {
-		$.info.classList.remove('hidden');
-		$.info.textContent = state.info;
-	} else {
-		$.info.classList.add('hidden');
-	}
-
-	// activate / deactivate tiles
-	if (state.activatedColor) {
-		COLORS.filter((color) => color !== state.activatedColor).forEach(
-			deactivateTile,
-		);
-		activateTile(state.activatedColor);
-	} else {
-		COLORS.forEach(deactivateTile);
-	}
-
-	if (state.showStartButton) {
-		$.startBtn.classList.remove('hidden');
-	} else {
-		$.startBtn.classList.add('hidden');
-	}
-
-	if (state.allowTileClicks) {
-		$.tiles.classList.remove('unclickable');
-	} else {
-		$.tiles.classList.add('unclickable');
-	}
-};
 
 const resetGame = () => update(initialState);
 
