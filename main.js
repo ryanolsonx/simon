@@ -1,16 +1,16 @@
+// -- CONSTANTS
+
 const TOTAL_LEVELS = 5;
-const TIME_BETWEEN_TILE_FLASHES = 600;
 const COLORS = ["red", "green", "blue", "yellow"];
-const ONE_SECOND = 1000;
 
 const initialState = {
   heading: "Simon Game",
   info: "",
   level: 0,
   showStartButton: true,
-  allowTileClicks: false,
-  sequence: [], // computer sequence to guess
-  humanSequence: [], // human guesses so far in sequence
+  canClickColorTiles: false,
+  computerColorsToGuess: [],
+  playerGuesses: [],
 };
 
 let state = initialState;
@@ -61,7 +61,7 @@ const view = () => {
     $.startBtn.classList.add("hidden");
   }
 
-  if (state.allowTileClicks) {
+  if (state.canClickColorTiles) {
     $.tiles.classList.remove("unclickable");
   } else {
     $.tiles.classList.add("unclickable");
@@ -71,15 +71,16 @@ const view = () => {
 const resetGame = () => update(initialState);
 
 const handleColorClicked = async (color) => {
-  update({ humanSequence: [...state.humanSequence, color] });
+  update({ playerGuesses: [...state.playerGuesses, color] });
 
-  const index = state.humanSequence.length - 1;
+  const index = state.playerGuesses.length - 1;
 
   $.getSoundByColor(color).play();
 
-  const remainingGuesses = state.sequence.length - state.humanSequence.length;
-  const guess = state.humanSequence[index];
-  const actual = state.sequence[index];
+  const remainingGuesses =
+    state.computerColorsToGuess.length - state.playerGuesses.length;
+  const guess = state.playerGuesses[index];
+  const actual = state.computerColorsToGuess[index];
 
   const isWrong = guess !== actual;
 
@@ -90,7 +91,7 @@ const handleColorClicked = async (color) => {
   }
 
   const answeredFullSequenceCorrectly =
-    state.humanSequence.length === state.sequence.length;
+    state.playerGuesses.length === state.computerColorsToGuess.length;
   const hasFinishedAllLevels = state.level === TOTAL_LEVELS;
   const hasFinishedRound = answeredFullSequenceCorrectly;
 
@@ -106,11 +107,11 @@ const handleColorClicked = async (color) => {
     return;
   } else if (hasFinishedRound) {
     update({
-      humanSequence: [],
+      playerGuesses: [],
       info: "Success! Keep going!",
     });
 
-    await sleep(ONE_SECOND);
+    await sleep(1000);
 
     nextRound();
   } else {
@@ -135,7 +136,7 @@ const getRemainingGuessesMessage = (remaining) =>
 const allowHumanToGuess = () => {
   update({
     info: getRemainingGuessesMessage(state.level),
-    allowTileClicks: true,
+    canClickColorTiles: true,
   });
 };
 
@@ -145,7 +146,7 @@ const computerShowSequence = async (seq) => {
   for (const color of seq) {
     $.getSoundByColor(color).play();
     update({ activatedColor: color });
-    await sleep(TIME_BETWEEN_TILE_FLASHES);
+    await sleep(600); // Keep activiated for a bit
     update({ activatedColor: "" });
     await sleep(50);
   }
@@ -154,21 +155,21 @@ const computerShowSequence = async (seq) => {
 const getRandomColor = () => COLORS[Math.floor(Math.random() * COLORS.length)];
 
 const nextRound = async () => {
-  const level = state.level + 1;
+  const nextLevel = state.level + 1;
 
   update({
-    heading: `Level ${level} of ${TOTAL_LEVELS}`,
-    level: level,
-    allowTileClicks: false,
+    heading: `Level ${nextLevel} of ${TOTAL_LEVELS}`,
+    level: nextLevel,
+    canClickColorTiles: false,
     info: "Wait for the computer",
   });
 
-  const nextSequence = [...state.sequence, getRandomColor()];
+  const nextSequence = [...state.computerColorsToGuess, getRandomColor()];
   await computerShowSequence(nextSequence);
 
   update({ sequence: nextSequence });
 
-  await sleep(ONE_SECOND);
+  await sleep(1000);
   allowHumanToGuess();
 };
 
