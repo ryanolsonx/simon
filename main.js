@@ -30,6 +30,14 @@ const $ = {
 	setHeading: (heading) => {
 		$.heading.textContent = heading;
 	},
+	setInfo: (info) => {
+		if (info) {
+			$.info.classList.remove('hidden');
+			$.info.textContent = info;
+		} else {
+			$.info.classList.add('hidden');
+		}
+	},
 	getTileByColor: (color) => document.querySelector(`[data-tile='${color}']`),
 	getSoundByColor: (color) => document.querySelector(`[data-sound='${color}']`),
 };
@@ -39,13 +47,7 @@ const $ = {
 const createUpdater = () => {
 	const render = (keysChangedMap) => {
 		if (keysChangedMap.heading) $.setHeading(state.heading);
-
-		if (state.info) {
-			$.info.classList.remove('hidden');
-			$.info.textContent = state.info;
-		} else {
-			$.info.classList.add('hidden');
-		}
+		if (keysChangedMap.info !== undefined) $.setInfo(state.info);
 
 		// activate / deactivate tiles
 		if (state.activatedColor) {
