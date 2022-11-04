@@ -38,6 +38,12 @@ const $ = {
 			$.info.classList.add('hidden');
 		}
 	},
+	activateTileByColor: (color) => {
+		$.getTileByColor(color).classList.add('activated');
+	},
+	deactivateTileByColor: (color) => {
+		$.getTileByColor(color).classList.remove('activated');
+	},
 	getTileByColor: (color) => document.querySelector(`[data-tile='${color}']`),
 	getSoundByColor: (color) => document.querySelector(`[data-sound='${color}']`),
 };
@@ -47,16 +53,19 @@ const $ = {
 const createUpdater = () => {
 	const render = (keysChangedMap) => {
 		if (keysChangedMap.heading) $.setHeading(state.heading);
+
 		if (keysChangedMap.info !== undefined) $.setInfo(state.info);
 
-		// activate / deactivate tiles
-		if (state.activatedColor) {
-			COLORS.filter((color) => color !== state.activatedColor).forEach(
-				deactivateTile,
-			);
-			activateTile(state.activatedColor);
-		} else {
-			COLORS.forEach(deactivateTile);
+		if (keysChangedMap.activatedColor !== undefined) {
+			// activate / deactivate tiles
+			if (state.activatedColor) {
+				COLORS.filter((color) => color !== state.activatedColor).forEach(
+					$.deactivateTileByColor,
+				);
+				$.activateTileByColor(state.activatedColor);
+			} else {
+				COLORS.forEach($.deactivateTileByColor);
+			}
 		}
 
 		if (state.showStartButton) {
@@ -88,11 +97,6 @@ const createUpdater = () => {
 };
 
 const update = createUpdater();
-
-const activateTile = (color) =>
-	$.getTileByColor(color).classList.add('activated');
-const deactivateTile = (color) =>
-	$.getTileByColor(color).classList.remove('activated');
 
 const resetGame = () => update(initialState);
 
