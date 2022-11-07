@@ -2,6 +2,7 @@
 
 const TOTAL_LEVELS = 5;
 const COLORS = ['red', 'green', 'blue', 'yellow'];
+
 // -- STATE
 
 const initialState = {
